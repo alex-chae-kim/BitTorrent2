@@ -218,3 +218,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- BitTorrent P2P project ---
+__pycache__/
+*.log
+
+# Per-peer data directories (peer_1001/, peer_1002/, ...)
+peer_*/
+
+# Generated test data
+TheFile.dat
+
+# Virtualenv
+.venv/
+
+# Docs
+docs
