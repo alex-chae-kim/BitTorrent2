@@ -231,3 +231,6 @@ TheFile.dat
 
 # Virtualenv
 .venv/
+
+# Docs
+docs

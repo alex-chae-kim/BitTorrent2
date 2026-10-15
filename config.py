@@ -13,7 +13,7 @@ This module must NOT:
 
 """
 
-# Owner: Person A
+# Owner: Unclaimed
 
 from __future__ import annotations
 

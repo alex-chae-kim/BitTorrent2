@@ -18,7 +18,7 @@ asyncio.sleep(interval)`` coroutine, started in the same ``asyncio.TaskGroup``
 as the reader tasks.
 """
 
-# Owner: Person C
+# Owner: Unclaimed
 
 from __future__ import annotations
 

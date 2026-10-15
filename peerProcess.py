@@ -28,7 +28,7 @@ If this file grows past roughly 400 lines, split the ``handle_*`` methods out
 into ``protocol.py`` and keep only startup, shared state and shutdown here.
 """
 
-# Owner: Person C (integration is shared)
+# Owner: Unclaimed (integration is shared)
 
 from __future__ import annotations
 

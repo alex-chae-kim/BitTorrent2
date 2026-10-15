@@ -16,7 +16,7 @@ The timestamp format is ours to choose but must include date, hour, minute and
 second; :data:`TIME_FORMAT` fixes that choice for every peer.
 """
 
-# Owner: Person A
+# Owner: Unclaimed
 
 from __future__ import annotations
 

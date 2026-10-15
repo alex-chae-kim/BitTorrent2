@@ -19,7 +19,7 @@ Concurrency model: asyncio. One reader task per connection awaits
 bytes of two messages on the same socket.
 """
 
-# Owner: Person B
+# Owner: Unclaimed
 
 from __future__ import annotations
 

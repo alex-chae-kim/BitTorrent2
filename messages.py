@@ -25,7 +25,7 @@ Every later message::
 integers are 4-byte big-endian (``!I`` / ``int.to_bytes(4, "big")``).
 """
 
-# Owner: Person B
+# Owner: Unclaimed
 
 from __future__ import annotations
 

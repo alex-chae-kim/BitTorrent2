@@ -18,7 +18,7 @@ Storage model: one pre-allocated file of ``file_size`` bytes at
 seek-and-write with no reassembly pass at the end.
 """
 
-# Owner: Person A
+# Owner: Unclaimed
 
 from __future__ import annotations
 

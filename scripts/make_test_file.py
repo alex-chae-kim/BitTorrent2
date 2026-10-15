@@ -18,7 +18,7 @@ copies, and incompressible enough that a short read shows up as a mismatch
 rather than as more zeroes.
 """
 
-# Owner: Person A
+# Owner: Unclaimed
 
 from __future__ import annotations
 

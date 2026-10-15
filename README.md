@@ -85,16 +85,20 @@ document the behaviour to pin down. Un-skip them as you implement.
 
 ## Module ownership
 
+Modules start unclaimed. To claim one, replace `Unclaimed` with your name in
+this table and in the file's `Owner` marker. For shared work, list the names
+in both places.
+
 | Module | Owner | Responsibility | May import |
 | --- | --- | --- | --- |
-| `config.py` | Person A | Parse `Common.cfg` / `PeerInfo.cfg`; `peers_before` | stdlib only |
-| `piece_manager.py` | Person A | Bitfield + pieces on disk in `peer_<ID>/` | `config` |
-| `logger.py` | Person A | The graded log, exact wording | stdlib only |
-| `messages.py` | Person B | Handshake and message framing | stdlib only |
-| `connection.py` | Person B | One TCP link per neighbour; transport only | `config`, `messages`, `piece_manager` |
-| `scheduler.py` | Person C | Preferred / optimistic selection, timer loops | stdlib only |
-| `peerProcess.py` | Person C | Startup, shared state, handlers, termination | all of the above |
-| `scripts/` | Person A | Test file, clean, verify | -- |
+| `config.py` | Unclaimed | Parse `Common.cfg` / `PeerInfo.cfg`; `peers_before` | stdlib only |
+| `piece_manager.py` | Unclaimed | Bitfield + pieces on disk in `peer_<ID>/` | `config` |
+| `logger.py` | Unclaimed | The graded log, exact wording | stdlib only |
+| `messages.py` | Unclaimed | Handshake and message framing | stdlib only |
+| `connection.py` | Unclaimed | One TCP link per neighbour; transport only | `config`, `messages`, `piece_manager` |
+| `scheduler.py` | Unclaimed | Preferred / optimistic selection, timer loops | stdlib only |
+| `peerProcess.py` | Unclaimed (integration shared) | Startup, shared state, handlers, termination | all of the above |
+| `scripts/` | Unclaimed | Test file, clean, verify | -- |
 | Integration | shared | End-to-end runs, multi-host testing | -- |
 
 **Dependency rule:** dependencies point downward only. `config`, `messages`,

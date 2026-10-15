@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Remove the output of a previous run: logs and non-seed peer directories.
 #
-# Owner: Person A
+# Owner: Unclaimed
 #
 # Usage (from the working directory):
 #   scripts/clean.sh          # logs + non-seed peer_*/ directories

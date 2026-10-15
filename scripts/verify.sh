@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Verify every peer ended up with a byte-identical copy of the shared file.
 #
-# Owner: Person A
+# Owner: Unclaimed
 #
 # Usage (from the working directory, after a run finishes):
 #   scripts/verify.sh
