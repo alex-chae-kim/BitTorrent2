@@ -94,7 +94,7 @@ in both places.
 | `config.py` | Unclaimed | Parse `Common.cfg` / `PeerInfo.cfg`; `peers_before` | stdlib only |
 | `piece_manager.py` | Unclaimed | Bitfield + pieces on disk in `peer_<ID>/` | `config` |
 | `logger.py` | Unclaimed | The graded log, exact wording | stdlib only |
-| `messages.py` | Unclaimed | Handshake and message framing | stdlib only |
+| `messages.py` | Ethan | Handshake and message framing | stdlib only |
 | `connection.py` | Unclaimed | One TCP link per neighbour; transport only | `config`, `messages`, `piece_manager` |
 | `scheduler.py` | Unclaimed | Preferred / optimistic selection, timer loops | stdlib only |
 | `peerProcess.py` | Unclaimed (integration shared) | Startup, shared state, handlers, termination | all of the above |

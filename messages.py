@@ -1,15 +1,4 @@
-"""Wire-format encoding and decoding.
-
-Responsibility
---------------
-The single source of truth for the bytes on the wire: the 32-byte handshake
-and the length-prefixed messages after it. Builders return complete, framed
-byte strings that a caller can hand straight to ``Connection.send``.
-
-This module must NOT:
-  * open sockets, read, or write (it is pure bytes in, bytes out);
-  * make protocol decisions (who to choke, what to request);
-  * import connection.py, scheduler.py or peerProcess.py.
+"""
 
 Frame layout
 ------------
@@ -22,10 +11,10 @@ Every later message::
     length (4 bytes) | type (1 byte) | payload (length - 1 bytes)
 
 ``length`` counts the type byte plus the payload and excludes itself. All
-integers are 4-byte big-endian (``!I`` / ``int.to_bytes(4, "big")``).
+integers are 4-byte big-endian.
 """
 
-# Owner: Unclaimed
+# Owner: Ethan
 
 from __future__ import annotations
 
@@ -78,16 +67,7 @@ def build_handshake(peer_id: int) -> bytes:
 
 
 def parse_handshake(data: bytes) -> int:
-    """Return the peer ID carried by a 32-byte handshake.
-
-    Raises
-    ------
-    ProtocolError
-        If *data* is not exactly :data:`HANDSHAKE_LEN` bytes or the header
-        does not match :data:`HANDSHAKE_HEADER`. The 10 zero bytes are
-        tolerated whatever they contain; the caller is responsible for
-        checking the returned ID against the peer it expected.
-    """
+    """Return the peer ID carried by a 32-byte handshake. Raises ProtocolError if header length or message does not match expectations."""
     if len(data) != HANDSHAKE_LEN:
         raise ProtocolError(f'Received data is not HANDSHAKE_LEN ({HANDSHAKE_LEN}) bytes. Recevied handshake of length {len(data)} bytes.')
 
@@ -124,13 +104,7 @@ def build_have(index: int) -> bytes:
 
 
 def build_bitfield(bitfield_bytes: bytes) -> bytes:
-    """Return a framed ``bitfield`` message wrapping *bitfield_bytes*.
-
-    *bitfield_bytes* comes from :meth:`piece_manager.Bitfield.to_bytes`;
-    this function does not interpret it. Sent only immediately after the
-    handshake. A peer with no pieces may skip the message entirely, so an
-    empty payload is legal but so is never sending one.
-    """
+    """Return a framed ``bitfield`` message wrapping *bitfield_bytes*."""
     return frame(BITFIELD, bitfield_bytes)
 
 
@@ -140,44 +114,18 @@ def build_request(index: int) -> bytes:
 
 
 def build_piece(index: int, data: bytes) -> bytes:
-    """Return a framed ``piece`` message: index followed by raw *data*.
-
-    *data* must be exactly ``piece_length(index)`` bytes; the short final
-    piece is sent short.
-    """
+    """Return a framed ``piece`` message: index followed by raw *data*. *data* must be exactly ``piece_length(index)`` bytes."""
     return frame(PIECE, index.to_bytes(INDEX_LEN, 'big') + data)
 
 
 def frame(msg_type: int, payload: bytes = b"") -> bytes:
-    """Prepend the 4-byte length and 1-byte type to *payload*.
-
-    Shared by every builder above; exposed for tests and for any message a
-    caller assembles by hand.
-    """
+    """Prepend the 4-byte length and 1-byte type to *payload*."""
     length = TYPE_LEN + len(payload)
     return length.to_bytes(LENGTH_PREFIX_LEN, "big") + bytes([msg_type]) + payload
 
 
 def parse_payload(msg_type: int, payload: bytes) -> object:
-    """Decode *payload* according to *msg_type*.
-
-    Returns
-    -------
-    ``None``
-        for choke / unchoke / interested / not_interested (payload must be
-        empty).
-    ``int``
-        the piece index, for have and request.
-    ``bytes``
-        the raw bitfield bytes, for bitfield.
-    ``tuple[int, bytes]``
-        ``(index, data)``, for piece.
-
-    Raises
-    ------
-    ProtocolError
-        On an unknown *msg_type* or a payload of the wrong length.
-    """
+    """Decode *payload* according to *msg_type*. Raises ProtocolError for unknown *msg_type* or wrong length of payload."""
     if msg_type in EMPTY_PAYLOAD_TYPES:
         if payload:
             raise ProtocolError('choke/unchoke/interested/not_interested message cannot have nonempty payload')
