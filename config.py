@@ -1,27 +1,16 @@
-"""Parsing of ``Common.cfg`` and ``PeerInfo.cfg``.
+"""
+Parsing of ``Common.cfg`` and ``PeerInfo.cfg``.
 
-Responsibility
---------------
-Turn the two plain-text config files in the working directory into typed,
-validated objects, and answer the one ordering question the startup sequence
-needs: which peers come *before* me in ``PeerInfo.cfg``.
-
-This module must NOT:
-  * open sockets or do any networking;
-  * touch the shared data file or the ``peer_[ID]/`` directories;
-  * import connection.py, scheduler.py or peerProcess.py.
-
+Turn the two plain-text config files in the working directory into typed
+objects and answer which peers come *before* me in ``PeerInfo.cfg``.
 """
 
-# Owner: Unclaimed
+# Owner: Blake Crawford
 
 from __future__ import annotations
-
 from dataclasses import dataclass
 
 #: Keys expected in Common.cfg, mapped to the CommonConfig field they fill.
-#: Order here is the canonical order of the file, but parsing must not depend
-#: on the order in which keys appear.
 COMMON_KEYS: dict[str, str] = {
     "NumberOfPreferredNeighbors": "num_preferred",
     "UnchokingInterval": "unchoking_interval",
@@ -31,33 +20,21 @@ COMMON_KEYS: dict[str, str] = {
     "PieceSize": "piece_size",
 }
 
-#: Number of whitespace-separated fields on a PeerInfo.cfg line.
-PEER_INFO_FIELDS = 4
+#Keys expected in PeerInfo.cfg, mapped to the PeerInfo field they fill.
+PEER_INFO_KEYS: dict[int, str] = {
+    0: "peer_id",
+    1: "host",
+    2: "port",
+    3: "has_file"
+}
 
 
 class ConfigError(ValueError):
-    """Raised for a missing file, an unknown key, or an unparsable line."""
+    """Raised when a config file is missing or invalid."""
 
 
 @dataclass(frozen=True)
 class CommonConfig:
-    """The contents of ``Common.cfg``.
-
-    Attributes
-    ----------
-    num_preferred:
-        ``k`` -- how many preferred neighbours to unchoke each interval.
-    unchoking_interval:
-        ``p`` -- seconds between preferred-neighbour recalculations.
-    optimistic_interval:
-        ``m`` -- seconds between optimistic-unchoke recalculations.
-    file_name:
-        Base name of the shared file (no directory component).
-    file_size:
-        Total size in bytes.
-    piece_size:
-        Size of every piece except possibly the last.
-    """
 
     num_preferred: int
     unchoking_interval: int
@@ -68,17 +45,14 @@ class CommonConfig:
 
     @property
     def num_pieces(self) -> int:
-        """``ceil(file_size / piece_size)``.
-
-        The last piece is short whenever ``file_size % piece_size != 0``; see
-        :meth:`piece_manager.PieceManager.piece_length`.
         """
-        raise NotImplementedError
+        Returns number of pieces in the file.
+        """
+        return (self.file_size + self.piece_size - 1) // self.piece_size
 
 
 @dataclass(frozen=True)
 class PeerInfo:
-    """One line of ``PeerInfo.cfg``."""
 
     peer_id: int
     host: str
@@ -86,43 +60,77 @@ class PeerInfo:
     has_file: bool
 
 
-def load_common(path: str) -> CommonConfig:
-    """Parse ``Common.cfg`` at *path*.
-
-    Each non-empty line is ``Key Value``. Unknown keys, duplicate keys,
-    missing keys, and non-integer values for the integer fields are all
-    :class:`ConfigError`.
-
-    Returns
-    -------
-    CommonConfig
-        Fully populated; no field is left to a default.
+def load_common(path: str = "Common.cfg") -> CommonConfig:
     """
-    raise NotImplementedError
-
-
-def load_peer_info(path: str) -> list[PeerInfo]:
-    """Parse ``PeerInfo.cfg`` at *path*, preserving file order.
-
-    File order is significant: it is the start order of the peers and it
-    defines "earlier peer" for :func:`peers_before`.
-
-    Each non-empty line is ``[peerID] [host] [port] [hasFile]`` where
-    ``hasFile`` is exactly ``0`` or ``1``. A duplicate peer ID is a
-    :class:`ConfigError`.
+    Load and validate a CommonConfig from the given file.
     """
-    raise NotImplementedError
+
+    values: dict[str, int | str] = {}
+
+    try:
+        config = open(path, "r", encoding="utf-8")
+    except OSError as err:
+        raise ConfigError(f"Cannot read {path}: {err}")
+
+    with config:
+        for line in config:
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            field_name, raw_value = stripped.split(maxsplit=1)
+            field_name = COMMON_KEYS[field_name]
+            
+            if field_name == "file_name":
+                values[field_name] = raw_value
+                continue
+
+            values[field_name] = int(raw_value)
+
+    # CommonConfig being a @dataclass, a constructor is generated expecting **values
+    return CommonConfig(**values)
+
+
+def load_peer_info(path: str = "PeerInfo.cfg") -> list[PeerInfo]:
+    """
+    Load and validate a PeerInfo from the given file.
+    """
+    peers: list[PeerInfo] = []
+
+    try:
+        config = open(path, "r", encoding="utf-8")
+    except OSError as err:
+        raise ConfigError(f"Cannot read {path}: {err}")
+
+    with config:
+        for line in config:
+            stripped = line.strip()
+            if not stripped:
+                continue
+
+            values: dict[str, str | int] = {}
+
+            for i, raw_value in enumerate(stripped.split(maxsplit=3)):
+                # Map value from the position in the line, using PEER_INFO_KEYS
+                if i == 0 or i== 2:
+                    values[PEER_INFO_KEYS[i]] = int(raw_value)
+                elif i == 1:
+                    values[PEER_INFO_KEYS[i]] = raw_value
+                elif i == 3:
+                    values[PEER_INFO_KEYS[i]] = raw_value == "1"
+
+            peers.append(PeerInfo(**values))
+
+    return peers
 
 
 def peers_before(peers: list[PeerInfo], my_id: int) -> list[PeerInfo]:
-    """Return the entries that appear before *my_id* in *peers*.
-
-    This peer dials each of these on startup; every later peer dials this
-    peer, so the result is a fully connected mesh.
-
-    Raises
-    ------
-    ConfigError
-        If *my_id* does not appear in *peers* at all.
     """
-    raise NotImplementedError
+    Return the entries that appear before *my_id* in *peers*.
+    """
+    for i in range(len(peers)):
+        peer = peers[i]
+        if peer.peer_id == my_id:
+            return peers[0:i]
+
+    raise ConfigError(f"Peer ID {my_id} not found in peer list")

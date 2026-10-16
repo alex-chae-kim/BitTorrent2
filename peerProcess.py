@@ -81,8 +81,7 @@ class PeerProcess:
         Raises
         ------
         config.ConfigError
-            A config file is missing or malformed, or *peer_id* is not listed
-            in ``PeerInfo.cfg``.
+            Raised when a config file is missing or invalid.
         """
         self.peer_id: int
         self.working_dir: str

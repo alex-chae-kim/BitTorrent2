@@ -11,10 +11,10 @@ Concurrency model: **asyncio**, one event loop per peer -- one reader task per
 connection, two timer loops, all inside a single `asyncio.TaskGroup`
 (Python 3.11+).
 
-> Status: repository skeleton. Every function body is `raise
-> NotImplementedError`; the log format strings in `logger.py` are the only
-> real content. See the per-module docstrings for the contract each owner is
-> implementing.
+> Status: implementation in progress. The config parsing and peer-order
+> helpers in `config.py` are implemented; most functions in the other core
+> modules and helper scripts remain unimplemented. See the TODO list for
+> outstanding work.
 
 ## Layout
 
@@ -28,7 +28,6 @@ piece_manager.py    bitfield + on-disk pieces in peer_<ID>/
 logger.py           the graded log_peer_<ID>.log
 connection.py       one TCP connection per neighbour
 scheduler.py        preferred / optimistic neighbour selection
-tests/              unittest, one file per module
 scripts/            test-file generation, clean, verify
 ```
 
@@ -74,15 +73,6 @@ pieces to `peer_<peerID>/` and its log to `log_peer_<peerID>.log` there.
 Running fewer than six peers is fine -- trim `PeerInfo.cfg` to the peers you
 intend to start, since `check_termination` waits for every peer listed there.
 
-## Tests
-
-```bash
-python -m unittest discover -s tests -v
-```
-
-All cases are currently `skip("not implemented")` placeholders that name and
-document the behaviour to pin down. Un-skip them as you implement.
-
 ## Module ownership
 
 Modules start unclaimed. To claim one, replace `Unclaimed` with your name in
@@ -91,7 +81,7 @@ in both places.
 
 | Module | Owner | Responsibility | May import |
 | --- | --- | --- | --- |
-| `config.py` | Unclaimed | Parse `Common.cfg` / `PeerInfo.cfg`; `peers_before` | stdlib only |
+| `config.py` | Blake Crawford | Parse `Common.cfg` / `PeerInfo.cfg`; `peers_before` | stdlib only |
 | `piece_manager.py` | Unclaimed | Bitfield + pieces on disk in `peer_<ID>/` | `config` |
 | `logger.py` | Unclaimed | The graded log, exact wording | stdlib only |
 | `messages.py` | Ethan | Handshake and message framing | stdlib only |
@@ -113,6 +103,9 @@ to stderr via `logger.debug`.
 
 ## TODO
 
+- [ ] **Add unit tests.** Create a `tests/` directory with `unittest` coverage
+   for the modules. Run the suite with
+   `python -m unittest discover -s tests -v`.
 - [ ] **Docker Compose multi-container run.** One service per peer off a
       single image, a shared volume (or a baked-in copy) for the generated
       file, and a `PeerInfo.cfg` whose hosts are the service names instead of
