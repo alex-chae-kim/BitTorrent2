@@ -1,25 +1,14 @@
 """This peer's bitfield and its copy of the shared file.
 
-Responsibility
---------------
-Own the on-disk storage in ``peer_[ID]/`` and the record of which pieces this
-peer holds. Answer "which of their pieces are interesting to me?" and "how
-long is piece i?".
-
-This module must NOT:
-  * track which pieces are currently *requested* -- the requested-pieces set
-    lives in peerProcess.py, because it is global across neighbours;
-  * hold any per-neighbour state (choked/interested flags, download rates);
-  * open sockets or import connection.py, scheduler.py or peerProcess.py.
-
 Storage model: one pre-allocated file of ``file_size`` bytes at
 ``<working_dir>/peer_<peer_id>/<file_name>``. Piece ``i`` lives at byte offset
 ``i * piece_size`` and is ``piece_length(i)`` bytes long, so writes are plain
 seek-and-write with no reassembly pass at the end.
 """
 
-# Owner: Unclaimed
+# Owner: Alex
 
+import math
 from __future__ import annotations
 
 from config import CommonConfig
@@ -33,67 +22,69 @@ class Bitfield:
     """A fixed-length bitmap of owned pieces.
 
     Spare trailing bits in the final byte (when ``num_pieces % 8 != 0``) are
-    always zero, both in memory and in :meth:`to_bytes`; a peer that sets one
-    is sending a piece index that does not exist.
+    always zero, both in memory and in :meth:`to_bytes`
     """
 
     def __init__(self, num_pieces: int) -> None:
         """Create an all-zero bitfield covering *num_pieces* pieces."""
-        raise NotImplementedError
+        self.num_pieces = num_pieces
+        self._bytes = bytearray(math.ceil(num_pieces / BITS_PER_BYTE))
+
+    def _locate(self, index: int) -> tuple[int, int]:
+        """Byte position and bit mask of piece *index*"""
+        if not 0 <= index < self.num_pieces:
+            raise IndexError(
+                f"piece index {index} outside range({self.num_pieces})"
+            )
+        return index // BITS_PER_BYTE, 0x80 >> (index % BITS_PER_BYTE)
 
     def set(self, index: int) -> None:
-        """Mark piece *index* as owned. Idempotent.
-
-        Raises
-        ------
-        IndexError
-            If *index* is outside ``range(num_pieces)``.
+        """Mark piece *index* as owned.
         """
-        raise NotImplementedError
+        pos, mask = self._locate(index)
+        self._bytes[pos] |= mask
 
     def has(self, index: int) -> bool:
         """Whether piece *index* is owned.
-
-        Raises
-        ------
-        IndexError
-            If *index* is outside ``range(num_pieces)``.
         """
-        raise NotImplementedError
+        pos, mask = self._locate(index)
+        return bool(self._bytes[pos] & mask)
 
     def count(self) -> int:
         """Number of pieces owned."""
-        raise NotImplementedError
+        return sum(byte.bit_count() for byte in self._bytes)
 
     def is_complete(self) -> bool:
         """Whether every piece in ``range(num_pieces)`` is owned."""
-        raise NotImplementedError
+        return self.count() == self.num_pieces
 
     def to_bytes(self) -> bytes:
         """Serialise to ``ceil(num_pieces / 8)`` bytes, spare bits zero."""
-        raise NotImplementedError
+        return bytes(self._bytes)
 
     @classmethod
     def from_bytes(cls, data: bytes, num_pieces: int) -> "Bitfield":
-        """Deserialise a received bitfield payload.
-
-        *data* must be exactly ``ceil(num_pieces / 8)`` bytes. Spare trailing
-        bits that are set are a protocol violation; treat them as an error
-        rather than as owned pieces.
-
-        An empty ``data`` with ``num_pieces == 0`` is the only case where a
-        zero-length payload is valid -- a peer with no pieces simply skips the
-        bitfield message instead of sending an empty one.
-        """
-        raise NotImplementedError
+        """Deserialise a received bitfield payload."""
+        bitfield = cls(num_pieces)
+        if len(data) != len(bitfield._bytes):
+            raise ValueError(
+                f"bitfield is {len(data)} bytes, expected "
+                f"{len(bitfield._bytes)} for {num_pieces} pieces"
+            )
+        spare_bits = len(data) * BITS_PER_BYTE - num_pieces
+        if data and data[-1] & ((1 << spare_bits) - 1):
+            raise ValueError("bitfield sets a spare trailing bit")
+        bitfield._bytes[:] = data
+        return bitfield
 
     def missing_from(self, other: "Bitfield") -> list[int]:
         """Indices *other* has and ``self`` lacks, ascending.
 
-        An empty result means "not interested in *other*". No rarest-first
-        ordering is applied -- the caller picks randomly.
+        An empty result means "not interested in *other*".
         """
-        raise NotImplementedError
+        return [
+            i for i in range(self.num_pieces) if other.has(i) and not self.has(i)
+        ]
 
 
 class PieceManager:
